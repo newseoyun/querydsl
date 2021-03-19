@@ -280,7 +280,50 @@ public class QuerydslBasicTest {
 
         // from 절에 여러 엔티티를 넣는.. 일명 막조인
         // 외부 조인 불가능한데 조인 on 을 사용하면 조인 가능
+    }
 
+    /**
+     * 예) 회원과 팀을 조인하면서, 팀 이름이 teamA 인 팀만 조인, 회원은 모두 조회
+     * JPQL: select m, t from Member m left join m.team t on t.name = 'teamA'
+     */
+    @Test
+    public void join_on_filtering() {
+        List<Tuple> result = queryFactory
+                .select(member, team)
+                .from(member)
+                .leftJoin(member.team, team) // on member.team_id = team.id
+                .on(team.name.eq("teamA")) // AND team.name = 'teamA'
+                .fetch();
+
+        for (Tuple tuple : result) {
+            System.out.println("tuple = " + tuple);
+        }
+
+        // 외부조인이 아니라 내부조인으로 on절 사용하면 where 절 조건 거는 것과 동일함.
+        // 그러니 내부조인은 걍 깔끔하게 where 쓰자.
+    }
+
+
+    /**
+     * 연관관계가 없는 엔티티 외부 조인
+     * 회원의 이름이 팀 이름과 같은 대상 외부 조인
+     */
+    @Test
+    public void join_on_no_relation() {
+        em.persist(new Member("teamA"));
+        em.persist(new Member("teamB"));
+        em.persist(new Member("teamC"));
+
+        List<Tuple> result = queryFactory
+                .select(member, team)
+                .from(member)
+                .leftJoin(team)
+                .on(member.username.eq(team.name))
+                .fetch();
+
+        for (Tuple tuple : result) {
+            System.out.println("tuple = " + tuple);
+        }
     }
 
 
