@@ -1,15 +1,18 @@
 package study.querydsl;
 
-import com.fasterxml.jackson.databind.deser.std.StdKeyDeserializer;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
-import com.querydsl.jpa.JPAExpressions;
+import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.CaseBuilder;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
+import study.querydsl.dto.MemberDto;
+import study.querydsl.dto.UserDto;
 import study.querydsl.entity.Member;
 import study.querydsl.entity.QMember;
 import study.querydsl.entity.Team;
@@ -17,10 +20,9 @@ import study.querydsl.entity.Team;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.PersistenceUnit;
-
 import java.util.List;
 
-import static com.querydsl.jpa.JPAExpressions.*;
+import static com.querydsl.jpa.JPAExpressions.select;
 import static org.assertj.core.api.Assertions.assertThat;
 import static study.querydsl.entity.QMember.member;
 import static study.querydsl.entity.QTeam.team;
@@ -449,8 +451,175 @@ public class QuerydslBasicTest {
         }
 
     }
-
     // from 절의 서브쿼리는 미지원.
+
+
+    // case 문
+    @Test
+    public void basicCase() {
+        List<String> result = queryFactory
+                .select(member.age
+                        .when(10).then("열살")
+                        .when(20).then("스무살")
+                        .otherwise("기타"))
+                .from(member)
+                .fetch();
+
+        for (String s : result) {
+            System.out.println("s = " + s);
+        }
+
+    }
+
+    @Test
+    public void complexCase() {
+        List<String> result = queryFactory
+                .select(new CaseBuilder()
+                        .when(member.age.between(0, 20)).then("0~20살")
+                        .when(member.age.between(21, 30)).then("21~30살")
+                        .otherwise("기타"))
+                .from(member)
+                .fetch();
+
+        for (String s : result) {
+            System.out.println("s = " + s);
+        }
+    }
+
+
+    // 상수, 문자 더하기
+    @Test
+    public void constant() {
+        List<Tuple> result = queryFactory
+                .select(member.username, Expressions.constant("A"))
+                .from(member)
+                .fetch();
+
+        for (Tuple tuple : result) {
+            System.out.println("tuple = " + tuple);
+        }
+    }
+
+    @Test
+    public void concat() {
+
+        // {username}_{age}
+        List<String> result = queryFactory
+                .select(member.username.concat("_").concat(member.age.stringValue())) // stringValue() 쓸 일 많음.
+                .from(member)
+                .where(member.username.eq("member1"))
+                .fetch();
+
+        for (String s : result) {
+            System.out.println("s = " + s);
+        }
+    }
+
+
+
+    // 프로젝션과 결과 반환
+    @Test
+    public void simpleProjection() {
+        List<String> result = queryFactory
+                .select(member.username)
+                .from(member)
+                .fetch();
+        for (String s : result) {
+            System.out.println("s = " + s);
+        }
+    }
+
+    @Test
+    public void tupleProjection() {
+        List<Tuple> result = queryFactory
+                .select(member.username, member.age)
+                .from(member)
+                .fetch();
+
+        for (Tuple tuple : result) {
+            String username = tuple.get(member.username);
+            Integer age = tuple.get(member.age);
+
+            System.out.println("username = " + username);
+            System.out.println("age = " + age);
+        }
+
+    }
+
+
+
+    // 프로젝션 결과 반환 - DTO
+
+    @Test
+    public void findDtoByJPQL() {
+        // 타입을 맞춰주기 위해 new 오퍼레이터를 사용해서 패키지 명을 적어준다.
+        List<MemberDto> result = em.createQuery("select new study.querydsl.dto.MemberDto(m.username, m.age) from Member m", MemberDto.class)
+                .getResultList();
+
+        for (MemberDto memberDto : result) {
+            System.out.println("memberDto = " + memberDto);
+        }
+    }
+
+    @Test
+    public void findDtoBySetter() {
+        List<MemberDto> result = queryFactory
+                .select(Projections.bean(MemberDto.class,
+                        member.username,
+                        member.age))
+                .from(member)
+                .fetch();
+
+        for (MemberDto memberDto : result) {
+            System.out.println("memberDto = " + memberDto);
+        }
+        // 기본 생성자 필요
+    }
+
+    @Test
+    public void findDtoByField() {
+        List<MemberDto> result = queryFactory
+                .select(Projections.fields(MemberDto.class,
+                        member.username,
+                        member.age))
+                .from(member)
+                .fetch();
+
+        for (MemberDto memberDto : result) {
+            System.out.println("memberDto = " + memberDto);
+        }
+        // 바로 필드(username, age)에다가 값을 넣어줌 setter 필요없음
+    }
+
+    @Test
+    public void findDtoByConstuctor() {
+        List<MemberDto> result = queryFactory
+                .select(Projections.constructor(MemberDto.class,
+                        member.username,
+                        member.age))
+                .from(member)
+                .fetch();
+
+        for (MemberDto memberDto : result) {
+            System.out.println("memberDto = " + memberDto);
+        }
+        // 만들어놓은 생성자 사용
+    }
+
+    @Test
+    public void findUserDto() {
+        List<UserDto> result = queryFactory
+                .select(Projections.fields(UserDto.class,
+                        member.username.as("name"),
+                        member.age))
+                .from(member)
+                .fetch();
+
+        for (UserDto userDto : result) {
+            System.out.println("userDto = " + userDto);
+        }
+        // 바로 필드(username, age)에다가 값을 넣어줌 setter 필요없음
+    }
 
 
 }
