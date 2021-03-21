@@ -2,9 +2,11 @@ package study.querydsl;
 
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -608,10 +610,18 @@ public class QuerydslBasicTest {
 
     @Test
     public void findUserDto() {
+        QMember memberSub = new QMember("memberSub");
+
         List<UserDto> result = queryFactory
                 .select(Projections.fields(UserDto.class,
                         member.username.as("name"),
-                        member.age))
+                        //member.age))
+
+                        // 서브쿼리
+                        ExpressionUtils.as(JPAExpressions
+                            .select(memberSub.age.max())
+                            .from(memberSub), "age")
+                ))
                 .from(member)
                 .fetch();
 
