@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 import study.querydsl.dto.MemberDto;
+import study.querydsl.dto.QMemberDto;
 import study.querydsl.dto.UserDto;
 import study.querydsl.entity.Member;
 import study.querydsl.entity.QMember;
@@ -630,6 +631,22 @@ public class QuerydslBasicTest {
         }
         // 바로 필드(username, age)에다가 값을 넣어줌 setter 필요없음
     }
+
+
+    // MemberDto 의 생성자에 @QueryProjection 어노테이션을 추가해서 QMemberDto 를 생성하여 반환하는 방법
+    // DTO 에 querydsl 의존성이 생기는 단점
+    @Test
+    public void findDtoByQueryProjection() {
+        List<MemberDto> result = queryFactory
+                .select(new QMemberDto(member.username, member.age))
+                .from(member)
+                .fetch();
+
+        for (MemberDto memberDto : result) {
+            System.out.println("memberDto = " + memberDto);
+        }
+    }
+
 
 
 }
