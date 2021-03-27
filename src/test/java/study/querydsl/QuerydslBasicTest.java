@@ -15,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.Commit;
 import org.springframework.transaction.annotation.Transactional;
 import study.querydsl.dto.MemberDto;
 import study.querydsl.dto.QMemberDto;
@@ -706,6 +707,33 @@ public class QuerydslBasicTest {
 
     private BooleanExpression allEq(String usernameCond, Integer ageCond) {
         return usernameEq(usernameCond).and(ageEq(ageCond));
+    }
+
+
+
+    @Test
+    @Commit
+    public void bulkUpdate() {
+
+        // 벌크연산 수행하면 DB만 바뀌고 영속성컨텍스트엔 유지된 상태임.
+        long count = queryFactory
+                .update(member)
+                .set(member.username, "비회원")
+                .where(member.age.lt(28))
+                .execute();
+
+
+        // 영속성컨텍스트가 우선하므로 이렇게 조회해도 DB값이 아닌 영속성컨텍스트 값을 가져옴
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .fetch();
+
+        for (Member member1 : result) {
+            System.out.println("member1 = " + member1.getUsername());
+        }
+
+        // 그러므로 벌크연산 수행 후 em.flush(); em.clear(); 해서 초기화해주기
+
     }
 
 
