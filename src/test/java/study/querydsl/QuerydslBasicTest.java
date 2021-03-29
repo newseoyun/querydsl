@@ -655,9 +655,9 @@ public class QuerydslBasicTest {
 
 
     @Test
-    public void dynamicQuery_BoolenaBuilder() {
+    public void dynamicQuery_BooleanBuilder() {
         String usernameParam = "member1";
-        Integer ageParam = null;
+        Integer ageParam = 10;
 
         List<Member> result = searchMember1(usernameParam, ageParam);
         assertThat(result.size()).isEqualTo(1);
@@ -676,7 +676,7 @@ public class QuerydslBasicTest {
 
         return queryFactory
                 .selectFrom(member)
-                .where()
+                .where(builder)
                 .fetch();
     }
 
